@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -37,23 +38,22 @@ func NewApp() *App {
 }
 
 func (a *App) Run() {
-	lines, err := Create(a.CSV)
+	lines, err := ReadCSV(a.CSV)
 	if err != nil {
-		fmt.Println(err)
-		return
+		ExitWithMessage(err.Error())
 	}
 	questions, err := ParseLines(lines)
 	if err != nil {
-		fmt.Println(err)
-		return
+		ExitWithMessage(err.Error())
 	}
 	timer := time.NewTimer(time.Duration(a.TimeLimit) * time.Second)
 	answerCh := make(chan string)
-	var answer string
+
 	var correctCount int = 0
 	for i, question := range questions {
 		fmt.Printf("Problem #%d: %s = ", i+1, question.Question)
 		go func() {
+			var answer string
 			fmt.Scanln(&answer)
 			answerCh <- answer
 		}()
@@ -71,7 +71,7 @@ func (a *App) Run() {
 	fmt.Printf("You scored %d out of %d", correctCount, len(questions))
 }
 
-func Create(Path string) (lines [][]string, err error) {
+func ReadCSV(Path string) (lines [][]string, err error) {
 	file, err := os.Open(Path)
 	if err != nil {
 		return
@@ -92,7 +92,10 @@ func ParseLines(Lines [][]string) (questions []Question, err error) {
 			err = fmt.Errorf("invalid line: %v", line)
 			return
 		}
-		questions[i] = Question{Question: line[0], Answer: line[1]}
+		questions[i] = Question{
+			Question: strings.TrimSpace(line[0]),
+			Answer:   strings.TrimSpace(line[1]),
+		}
 	}
 	return
 }
